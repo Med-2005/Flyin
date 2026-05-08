@@ -3,7 +3,7 @@ class Zone:
         self.name = name
         self.x = x
         self.y = y
-        self.type = type
+        self.type = zone_type
         self.max_drones = max_drones
         self.color = color
 

@@ -16,8 +16,8 @@ class Connection:
 
 
 class Drone:
-    def __init__(self, ID, curr_loc, nex_dest, mov_state):
+    def __init__(self, ID, curr_location, nex_dest, mov_state):
         self.ID = ID
-        self.curr_loc = curr_loc
+        self.curr_loc = curr_location
         self.nex_dest = nex_dest
         self.mov_state = mov_state

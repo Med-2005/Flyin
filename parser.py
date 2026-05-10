@@ -72,7 +72,7 @@ class MapParser:
             raise InvalidConfErr("At least one connection is required")
 
     def build_zones(self) -> None:
-        if self.start_hub_raw:
+        if self.start_hub_raw:  # kayn
             start_zone = self.parse_zone_string(self.start_hub_raw)
             self.zones[start_zone.name] = start_zone
 
@@ -106,7 +106,7 @@ class MapParser:
         name = core_items[0]
 
         if '-' in name:
-            raise InvalidConfErr(f"Zone name cannot contain dashes: {name}")
+            raise InvalidConfErr(f"Zone name cannot contain -: {name}")
 
         x = int(core_items[1])
         y = int(core_items[2])
@@ -115,11 +115,11 @@ class MapParser:
         max_drones = 1
         color = None
 
-        if metadata_str:
+        if metadata_str:  # not empty
             meta_items = metadata_str.split()
-            for item in meta_items:
-                if '=' in item:
-                    key, val = item.split('=', 1)
+            for i in meta_items:
+                if '=' in i:
+                    key, val = i.split('=', 1)
                     if key == 'zone':
                         zone_type = val
                     elif key == 'max_drones':
@@ -187,9 +187,9 @@ class MapParser:
 
         if metadata_str:
             meta_items = metadata_str.split()
-            for item in meta_items:
-                if '=' in item:
-                    key, val = item.split('=', 1)
+            for i in meta_items:
+                if '=' in i:
+                    key, val = i.split('=', 1)
                     if key == 'max_link_capacity':
                         max_link_capacity = int(val)
 

@@ -1,0 +1,74 @@
+# The Impossible Dream - 25 Drones Challenge
+# Target: <= 45 turns
+nb_drones: 25
+
+# === Start and End ===
+start_hub: alpha 0 5 [color=blue max_drones=25]
+end_hub: omega 20 5 [color=green max_drones=25]
+
+# === The Splitting Hubs (Front) ===
+hub: split_up 2 8 [zone=normal color=gray max_drones=5]
+hub: split_mid 2 5 [zone=priority color=yellow max_drones=3]
+hub: split_down 2 2 [zone=normal color=gray max_drones=5]
+
+# === The Nightmare Corridors (Middle) ===
+# Upper route: High capacity but restricted (takes 2 turns per move)
+hub: upper_1 6 9 [zone=restricted color=red max_drones=4]
+hub: upper_2 10 9 [zone=restricted color=red max_drones=4]
+hub: upper_3 14 9 [zone=restricted color=red max_drones=4]
+
+# Middle route: Priority, very fast, but massive bottleneck (capacity 1)
+hub: mid_1 6 5 [zone=priority color=green max_drones=1]
+hub: mid_2 10 5 [zone=priority color=green max_drones=1]
+hub: mid_3 14 5 [zone=priority color=green max_drones=1]
+
+# Lower route: Normal, but blocked in the middle forcing a detour
+hub: low_1 6 1 [zone=normal max_drones=3]
+hub: low_block 10 1 [zone=blocked color=gray]
+hub: low_detour 10 3 [zone=normal max_drones=2]
+hub: low_3 14 1 [zone=normal max_drones=3]
+
+# === The Convergence Hubs (Back) ===
+hub: merge_up 17 8 [zone=normal max_drones=5]
+hub: merge_mid 17 5 [zone=normal max_drones=5]
+hub: merge_down 17 2 [zone=normal max_drones=5]
+
+# === Connections ===
+# Start to split
+connection: alpha-split_up [max_link_capacity=3]
+connection: alpha-split_mid [max_link_capacity=2]
+connection: alpha-split_down [max_link_capacity=3]
+
+# Split to corridors
+connection: split_up-upper_1 [max_link_capacity=4]
+connection: split_mid-mid_1 [max_link_capacity=1]
+connection: split_down-low_1 [max_link_capacity=3]
+connection: split_mid-upper_1 [max_link_capacity=1]
+connection: split_mid-low_1 [max_link_capacity=1]
+
+# Corridor progression
+connection: upper_1-upper_2 [max_link_capacity=4]
+connection: upper_2-upper_3 [max_link_capacity=4]
+
+connection: mid_1-mid_2 [max_link_capacity=1]
+connection: mid_2-mid_3 [max_link_capacity=1]
+
+# Detour logic for lower route
+connection: low_1-low_detour [max_link_capacity=2]
+connection: low_detour-low_3 [max_link_capacity=2]
+connection: low_1-low_block
+connection: low_block-low_3
+
+# Cross-corridor (allows drones to change lanes if stuck)
+connection: upper_2-mid_2 [max_link_capacity=1]
+connection: low_detour-mid_2 [max_link_capacity=1]
+
+# Corridors to merge
+connection: upper_3-merge_up [max_link_capacity=4]
+connection: mid_3-merge_mid [max_link_capacity=2]
+connection: low_3-merge_down [max_link_capacity=3]
+
+# Merge to End
+connection: merge_up-omega [max_link_capacity=4]
+connection: merge_mid-omega [max_link_capacity=2]
+connection: merge_down-omega [max_link_capacity=4]

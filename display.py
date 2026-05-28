@@ -1,12 +1,30 @@
-def twoSum(nums, target):
-    seen = {}
+from typing import Dict, List, Tuple
+from models import Zone
 
-    for i, l in enumerate(nums):
-        needed = target - l
+COLORS = {
+    "red": "\033[91m",
+    "green": "\033[92m",
+    "yellow": "\033[93m",
+    "blue": "\033[94m",
+    "gray": "\033[90m",
+    "reset": "\033[0m"
+}
 
-        if needed in seen:
-            return [seen[needed], i]
-
-        seen[l] = i
-
-print(twoSum([2,7,11,15], 9))
+def print_turn(movements: List[Tuple[str, str]], zones: Dict[str, Zone]) -> None:
+    if not movements:
+        return
+    
+    output = []
+    for drone_id, dest in movements:
+        dest_name = dest.split('-')[-1] if '-' in dest else dest
+        zone = zones.get(dest_name)
+        
+        color_code = ""
+        reset_code = ""
+        if zone and zone.color and zone.color.lower() in COLORS:
+            color_code = COLORS[zone.color.lower()]
+            reset_code = COLORS["reset"]
+            
+        output.append(f"{drone_id}-{color_code}{dest}{reset_code}")
+        
+    print(" ".join(output))

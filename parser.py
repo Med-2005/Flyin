@@ -3,7 +3,6 @@ from typing import Dict, List, Optional, Set, Tuple
 from exceptions import InvalidConfErr
 from models import Zone, Connection
 
-
 class MapParser:
     def __init__(self, file_path: str) -> None:
         self.file_path: str = file_path
@@ -23,10 +22,9 @@ class MapParser:
                     if not line or line.startswith('#'):
                         continue
                     if ':' not in line:
-                        raise InvalidConfErr(f"Invalid line format: {line}")
+                        raise InvalidConfErr(f"Invalid format: {line}")
                     key, value = line.split(':', 1)
-                    key = key.strip().lower()
-                    value = value.strip()
+                    key, value = key.strip().lower(), value.strip()
                     if key == 'nb_drones':
                         self.set_nb_drones(value)
                     elif key == 'start_hub':
@@ -42,160 +40,81 @@ class MapParser:
             self.validate_config()
             self.build_zones()
             self.build_connections()
-        except InvalidConfErr as e:
-            print(f"Configuration Error: {e}")
-            sys.exit(1)
-        except FileNotFoundError:
-            print(f"Error: File '{self.file_path}' not found.")
+        except Exception as e:
+            print(f"Error: {e}")
             sys.exit(1)
 
     def set_nb_drones(self, value: str) -> None:
-        try:
-            drones = int(value)
-            if drones <= 0:
-                raise InvalidConfErr("Number of drones can't be 0 or less")
-            self.nb_drones = drones
-        except ValueError:
-            raise InvalidConfErr("Number of drones must be a valid number")
+        drones = int(value)
+        if drones <= 0:
+            raise InvalidConfErr("Number of drones must be > 0")
+        self.nb_drones = drones
 
     def validate_config(self) -> None:
-        missing_keys: List[str] = []
-        if self.nb_drones == 0:
-            missing_keys.append("nb_drones")
-        if not self.start_hub_raw:
-            missing_keys.append("start_hub")
-        if not self.end_hub_raw:
-            missing_keys.append("end_hub")
-        if missing_keys:
-            raise InvalidConfErr(f"Missing mandatory keys: {missing_keys}")
+        if self.nb_drones == 0 or not self.start_hub_raw or not self.end_hub_raw:
+            raise InvalidConfErr("Missing mandatory keys")
         if not self.connections_raw:
-            raise InvalidConfErr("At least one connection is required")
+            raise InvalidConfErr("At least one connection required")
 
     def build_zones(self) -> None:
-        if self.start_hub_raw:  # kayn
-            start_zone = self.parse_zone_string(self.start_hub_raw)
-            self.zones[start_zone.name] = start_zone
-
+        if self.start_hub_raw:
+            sz = self.parse_zone_string(self.start_hub_raw)
+            self.zones[sz.name] = sz
         if self.end_hub_raw:
-            end_zone = self.parse_zone_string(self.end_hub_raw)
-            self.zones[end_zone.name] = end_zone
-
+            ez = self.parse_zone_string(self.end_hub_raw)
+            self.zones[ez.name] = ez
         for hub_raw in self.hubs_raw:
-            zone_obj = self.parse_zone_string(hub_raw)
-            if zone_obj.name in self.zones:
-                raise InvalidConfErr(f"Duplicate zone. {zone_obj.name}")
-            self.zones[zone_obj.name] = zone_obj
+            z = self.parse_zone_string(hub_raw)
+            if z.name in self.zones:
+                raise InvalidConfErr(f"Duplicate zone: {z.name}")
+            self.zones[z.name] = z
 
-    def parse_zone_string(self, raw_string: str) -> Zone:
-        raw_string = raw_string.strip()
-        bracket_index = raw_string.find('[')
+    def parse_zone_string(self, raw: str) -> Zone:
+        b_idx = raw.find('[')
+        core = raw[:b_idx].strip() if b_idx != -1 else raw.strip()
+        meta = raw[b_idx + 1: -1].strip() if b_idx != -1 else ""
+        
+        items = core.split()
+        if len(items) != 3 or '-' in items[0]:
+            raise InvalidConfErr(f"Invalid zone: {raw}")
+            
+        name, x, y = items[0], int(items[1]), int(items[2])
+        z_type, max_drones, color = "normal", 1, None
+        
+        for item in meta.split():
+            if '=' in item:
+                k, v = item.split('=', 1)
+                if k == 'zone': z_type = v
+                elif k == 'max_drones': max_drones = int(v)
+                elif k == 'color': color = v
 
-        core_part = ""
-        metadata_str = ""
-
-        if bracket_index != -1:
-            core_part = raw_string[:bracket_index].strip()
-            metadata_str = raw_string[bracket_index + 1: -1].strip()
-        else:
-            core_part = raw_string
-
-        core_items = core_part.split()
-        if len(core_items) != 3:
-            raise InvalidConfErr(f"Invalid zone format: {raw_string}")
-
-        name = core_items[0]
-
-        if '-' in name:
-            raise InvalidConfErr(f"Zone name cannot contain -: {name}")
-
-        x = int(core_items[1])
-        y = int(core_items[2])
-
-        zone_type = "normal"
-        max_drones = 1
-        color = None
-
-        if metadata_str:  # not empty
-            meta_items = metadata_str.split()
-            for i in meta_items:
-                if '=' in i:
-                    key, val = i.split('=', 1)
-                    if key == 'zone':
-                        zone_type = val
-                    elif key == 'max_drones':
-                        max_drones = int(val)
-                    elif key == 'color':
-                        color = val
-
-        valid_zone_types = ["normal", "blocked", "restricted", "priority"]
-        if zone_type not in valid_zone_types:
-            raise InvalidConfErr(
-                f"Invalid zone type '{zone_type}' for zone '{name}'")
-
-        if max_drones <= 0:
-            raise InvalidConfErr(
-                f"max_drones must be positive for zone '{name}'")
-
-        return Zone(name, x, y, zone_type, max_drones, color)
+        if z_type not in ["normal", "blocked", "restricted", "priority"]:
+            raise InvalidConfErr(f"Invalid type '{z_type}'")
+            
+        return Zone(name, x, y, z_type, max_drones, color)
 
     def build_connections(self) -> None:
-        seen_connections: Set[Tuple[str, str]] = set()
+        seen: Set[Tuple[str, str]] = set()
+        for raw in self.connections_raw:
+            c = self.parse_connection_string(raw)
+            if (c.zone1, c.zone2) in seen or (c.zone2, c.zone1) in seen:
+                raise InvalidConfErr(f"Duplicate connection: {c.zone1}-{c.zone2}")
+            seen.add((c.zone1, c.zone2))
+            self.connections.append(c)
 
-        for conn_raw in self.connections_raw:
-            conn_obj = self.parse_connection_string(conn_raw)
-
-            conn_pair1 = (conn_obj.zone1, conn_obj.zone2)
-            conn_pair2 = (conn_obj.zone2, conn_obj.zone1)
-
-            if (conn_pair1 in seen_connections
-                    or conn_pair2 in seen_connections):
-                raise InvalidConfErr(
-                    "Duplicate connection found: "
-                    f"{conn_obj.zone1}-{conn_obj.zone2}")
-
-            seen_connections.add(conn_pair1)
-            self.connections.append(conn_obj)
-
-    def parse_connection_string(self, raw_string: str) -> Connection:
-        raw_string = raw_string.strip()
-        bracket_index = raw_string.find('[')
-
-        core_part = ""
-        metadata_str = ""
-
-        if bracket_index != -1:
-            core_part = raw_string[:bracket_index].strip()
-            metadata_str = raw_string[bracket_index + 1: -1].strip()
-        else:
-            core_part = raw_string
-
-        stations = core_part.split('-')
-        if len(stations) != 2:
-            raise InvalidConfErr(f"Invalid connection format: {raw_string}")
-
-        zone1_name = stations[0].strip()
-        zone2_name = stations[1].strip()
-
-        if zone1_name not in self.zones:
-            raise InvalidConfErr(
-                f"Invalid connection: '{zone1_name}' not found")
-        if zone2_name not in self.zones:
-            raise InvalidConfErr(
-                f"Invalid connection: '{zone2_name}' not found")
-
-        max_link_capacity = 1
-
-        if metadata_str:
-            meta_items = metadata_str.split()
-            for i in meta_items:
-                if '=' in i:
-                    key, val = i.split('=', 1)
-                    if key == 'max_link_capacity':
-                        max_link_capacity = int(val)
-
-        if max_link_capacity <= 0:
-            raise InvalidConfErr(
-                "max_link_capacity must be positive for connection "
-                f"'{zone1_name}-{zone2_name}'")
-
-        return Connection(zone1_name, zone2_name, max_link_capacity)
+    def parse_connection_string(self, raw: str) -> Connection:
+        b_idx = raw.find('[')
+        core = raw[:b_idx].strip() if b_idx != -1 else raw.strip()
+        meta = raw[b_idx + 1: -1].strip() if b_idx != -1 else ""
+        
+        stations = core.split('-')
+        if len(stations) != 2 or stations[0] not in self.zones or stations[1] not in self.zones:
+            raise InvalidConfErr(f"Invalid connection: {raw}")
+            
+        cap = 1
+        for item in meta.split():
+            if '=' in item:
+                k, v = item.split('=', 1)
+                if k == 'max_link_capacity': cap = int(v)
+                
+        return Connection(stations[0].strip(), stations[1].strip(), cap)

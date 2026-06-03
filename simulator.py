@@ -14,17 +14,17 @@ class Simulation:
         self.turn = 0
         self.graph: Dict[str, List[str]] = {name: [] for name in self.zones}
         self.link_caps: Dict[Tuple[str, str], int] = {}
-        self._build_graph()
-        self._calculate_paths()
+        self.build_graph()
+        self.calculate_paths()
 
-    def _build_graph(self) -> None:
+    def build_graph(self) -> None:
         for c in self.connections:
             self.graph[c.zone1].append(c.zone2)
             self.graph[c.zone2].append(c.zone1)
             self.link_caps[(c.zone1, c.zone2)] = c.max_link_capacity
             self.link_caps[(c.zone2, c.zone1)] = c.max_link_capacity
 
-    def _calculate_paths(self) -> None:
+    def calculate_paths(self) -> None:
         path = dijkstra_algo(self.start_zone, self.end_zone, self.zones, self.graph)
         if path and path[0] == self.start_zone:
             for d in self.drones:

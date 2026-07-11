@@ -1,7 +1,9 @@
 from typing import Optional, List
 
+
 class Zone:
-    def __init__(self, name: str, x: int, y: int, zone_type: str, max_drones: int, color: Optional[str]):
+    def __init__(self, name: str, x: int, y: int, zone_type: str,
+                 max_drones: int, color: Optional[str]):
         self.name = name
         self.x = x
         self.y = y
@@ -9,11 +11,13 @@ class Zone:
         self.max_drones = max_drones
         self.color = color
 
+
 class Connection:
     def __init__(self, zone1: str, zone2: str, max_link_capacity: int):
         self.zone1 = zone1
         self.zone2 = zone2
         self.max_link_capacity = max_link_capacity
+
 
 class Drone:
     def __init__(self, drone_id: str, curr_loc: str, state: str = "idle"):

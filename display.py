@@ -10,21 +10,23 @@ COLORS = {
     "reset": "\033[0m"
 }
 
-def print_turn(movements: List[Tuple[str, str]], zones: Dict[str, Zone]) -> None:
+
+def print_turn(movements: List[Tuple[str, str]],
+               zones: Dict[str, Zone]) -> None:
     if not movements:
         return
-    
+
     output = []
     for drone_id, dest in movements:
         dest_name = dest.split('-')[-1] if '-' in dest else dest
         zone = zones.get(dest_name)
-        
+
         color_code = ""
         reset_code = ""
         if zone and zone.color and zone.color.lower() in COLORS:
             color_code = COLORS[zone.color.lower()]
             reset_code = COLORS["reset"]
-            
+
         output.append(f"{drone_id}-{color_code}{dest}{reset_code}")
-        
+
     print(" ".join(output))

@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Set, Tuple
 from exceptions import InvalidConfErr
 from models import Zone, Connection
 
+
 class MapParser:
     def __init__(self, file_path: str) -> None:
         self.file_path: str = file_path
@@ -40,7 +41,7 @@ class MapParser:
             self.validate_config()
             self.build_zones()
             self.build_connections()
-        except Exception as e:
+        except BaseException as e:
             print(f"Error: {e}")
             sys.exit(1)
 
@@ -51,7 +52,7 @@ class MapParser:
         self.nb_drones = drones
 
     def validate_config(self) -> None:
-        if self.nb_drones == 0 or not self.start_hub_raw or not self.end_hub_raw:
+        if not self.start_hub_raw or not self.end_hub_raw:
             raise InvalidConfErr("Missing mandatory keys")
         if not self.connections_raw:
             raise InvalidConfErr("At least one connection required")
@@ -73,24 +74,27 @@ class MapParser:
         b_idx = raw.find('[')
         core = raw[:b_idx].strip() if b_idx != -1 else raw.strip()
         meta = raw[b_idx + 1: -1].strip() if b_idx != -1 else ""
-        
+
         items = core.split()
         if len(items) != 3 or '-' in items[0]:
             raise InvalidConfErr(f"Invalid zone: {raw}")
-            
+
         name, x, y = items[0], int(items[1]), int(items[2])
         z_type, max_drones, color = "normal", 1, None
-        
+
         for item in meta.split():
             if '=' in item:
                 k, v = item.split('=', 1)
-                if k == 'zone': z_type = v
-                elif k == 'max_drones': max_drones = int(v)
-                elif k == 'color': color = v
+                if k == 'zone':
+                    z_type = v
+                elif k == 'max_drones':
+                    max_drones = int(v)
+                elif k == 'color':
+                    color = v
 
         if z_type not in ["normal", "blocked", "restricted", "priority"]:
-            raise InvalidConfErr(f"Invalid type '{z_type}'")
-            
+            raise InvalidConfErr(f"Invalid type of zone '{z_type}'")
+
         return Zone(name, x, y, z_type, max_drones, color)
 
     def build_connections(self) -> None:
@@ -98,7 +102,8 @@ class MapParser:
         for raw in self.connections_raw:
             c = self.parse_connection_string(raw)
             if (c.zone1, c.zone2) in seen or (c.zone2, c.zone1) in seen:
-                raise InvalidConfErr(f"Duplicate connection: {c.zone1}-{c.zone2}")
+                raise InvalidConfErr(
+                    f"Duplicate connection: {c.zone1}-{c.zone2}")
             seen.add((c.zone1, c.zone2))
             self.connections.append(c)
 
@@ -106,15 +111,18 @@ class MapParser:
         b_idx = raw.find('[')
         core = raw[:b_idx].strip() if b_idx != -1 else raw.strip()
         meta = raw[b_idx + 1: -1].strip() if b_idx != -1 else ""
-        
+
         stations = core.split('-')
-        if len(stations) != 2 or stations[0] not in self.zones or stations[1] not in self.zones:
+        if (len(stations) != 2 or
+                stations[0] not in self.zones or
+                stations[1] not in self.zones):
             raise InvalidConfErr(f"Invalid connection: {raw}")
-            
-        cap = 1
+
+        mlc = 1
         for item in meta.split():
             if '=' in item:
                 k, v = item.split('=', 1)
-                if k == 'max_link_capacity': cap = int(v)
-                
-        return Connection(stations[0].strip(), stations[1].strip(), cap)
+                if k == 'max_link_capacity':
+                    mlc = int(v)
+
+        return Connection(stations[0].strip(), stations[1].strip(), mlc)

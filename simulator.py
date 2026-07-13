@@ -43,11 +43,13 @@ class Simulation:
 
             zone_occ = {z: 0 for z in self.zones}
             for d in self.drones:
-                if d.state == "idle" and d.curr_loc not in (
+                if d.state == "waiting" and d.curr_loc not in (
                         self.start_zone, self.end_zone):
                     zone_occ[d.curr_loc] += 1
 
-            link_occ = {k: 0 for k in self.link_caps}
+            link_occ = {}
+            for k in self.link_caps:
+                link_occ[k] = 0
 
             for d in self.drones:
                 if d.curr_loc == self.end_zone:
@@ -55,7 +57,7 @@ class Simulation:
 
                 if d.state == "moving" and d.target:
                     d.curr_loc = d.target
-                    d.state = "idle"
+                    d.state = "waiting"
                     movements.append((d.id, d.curr_loc))
                     if d.curr_loc not in (self.start_zone, self.end_zone):
                         zone_occ[d.curr_loc] += 1

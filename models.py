@@ -20,7 +20,7 @@ class Connection:
 
 
 class Drone:
-    def __init__(self, drone_id: str, curr_loc: str, state: str = "idle"):
+    def __init__(self, drone_id: str, curr_loc: str, state: str = "waiting"):
         self.id = drone_id
         self.curr_loc = curr_loc
         self.state = state

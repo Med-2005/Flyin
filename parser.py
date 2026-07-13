@@ -53,7 +53,7 @@ class MapParser:
 
     def validate_config(self) -> None:
         if not self.start_hub_raw or not self.end_hub_raw:
-            raise InvalidConfErr("Missing mandatory keys")
+            raise InvalidConfErr("start_hub and end_hub are required")
         if not self.connections_raw:
             raise InvalidConfErr("At least one connection required")
 

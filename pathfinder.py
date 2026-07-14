@@ -3,7 +3,6 @@ import math
 from typing import Dict, List, Optional
 from models import Zone
 
-
 def get_move_cost(zone_type: str) -> float:
     if zone_type == "restricted":
         return 2.0
@@ -11,10 +10,14 @@ def get_move_cost(zone_type: str) -> float:
         return 0.5
     return 1.0
 
-
 def dijkstra_algo(start: str, end: str,
                   zones: Dict[str, Zone],
-                  graph: Dict[str, List[str]]) -> Optional[List[str]]:
+                  graph: Dict[str, List[str]],
+                  zone_penalties: Dict[str, float] = None) -> Optional[List[str]]:
+    
+    if zone_penalties is None:
+        zone_penalties = {}
+
     distances: Dict[str, float] = {z: math.inf for z in zones}
     previous: Dict[str, Optional[str]] = {z: None for z in zones}
     distances[start] = 0.0
@@ -32,10 +35,13 @@ def dijkstra_algo(start: str, end: str,
 
         for neighbor in graph.get(curr_zone, []):
             z_obj = zones[neighbor]
+            
             if z_obj.type == "blocked":
                 continue
 
-            cost = get_move_cost(z_obj.type)
+            penalty = zone_penalties.get(neighbor, 0.0) if neighbor != end else 0.0
+            
+            cost = get_move_cost(z_obj.type) + penalty
             new_dist = curr_dist + cost
 
             if new_dist < distances[neighbor]:
@@ -54,3 +60,24 @@ def dijkstra_algo(start: str, end: str,
 
     path.reverse()
     return path
+
+def get_diverse_paths(start: str, end: str,
+                       zones: Dict[str, Zone],
+                       graph: Dict[str, List[str]],
+                       max_paths: int = 2) -> List[List[str]]: 
+    paths = []
+    penalties: Dict[str, float] = {}
+
+    for _ in range(max_paths):
+        path = dijkstra_algo(start, end, zones, graph, penalties)
+        if not path:
+            break
+
+        paths.append(path)
+        
+        for zone in path:
+            if zone != start and zone != end:
+                if zones[zone].type == "restricted":
+                    penalties[zone] = penalties.get(zone, 0.0) + 100.0
+
+    return paths

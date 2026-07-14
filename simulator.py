@@ -1,6 +1,6 @@
 from typing import Dict, List, Tuple
 from models import Zone, Connection, Drone
-from pathfinder import dijkstra_algo
+from pathfinder import get_diverse_paths
 from display import print_turn
 
 
@@ -30,11 +30,16 @@ class Simulation:
             self.link_caps[(c.zone2, c.zone1)] = c.max_link_capacity
 
     def calculate_paths(self) -> None:
-        path = dijkstra_algo(
-            self.start_zone, self.end_zone, self.zones, self.graph)
-        if path and path[0] == self.start_zone:
-            for d in self.drones:
-                d.path = list(path[1:])
+        paths = get_diverse_paths(
+            self.start_zone, self.end_zone, self.zones, self.graph, max_paths=2)
+        
+        if not paths:
+            return
+
+        for i, d in enumerate(self.drones):
+            chosen_path = paths[i % len(paths)]
+            if chosen_path and chosen_path[0] == self.start_zone:
+                d.path = list(chosen_path[1:])
 
     def run(self) -> None:
         while not all(d.curr_loc == self.end_zone for d in self.drones):

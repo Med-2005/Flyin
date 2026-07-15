@@ -35,6 +35,9 @@ def dijkstra_algo(start: str, end: str,
 
         if curr_dist > distances[curr_zone]:
             continue
+        # "Skip exploring this path
+        # if we have already found a shorter,
+        #  faster route to the current zone."
 
         for neighbor in graph.get(curr_zone, []):
             z_obj = zones[neighbor]

@@ -2,6 +2,7 @@ from typing import Dict, List, Tuple
 from models import Zone, Connection, Drone
 from pathfinder import get_diverse_paths
 from display import print_turn
+from exceptions import InvalidConfErr
 
 
 class Simulation:
@@ -17,8 +18,8 @@ class Simulation:
         self.turn = 0
         self.graph: Dict[str, List[str]] = {name: [] for name in self.zones}
         # where can i go
-        self.link_caps: Dict[Tuple[str, str], int] = {} # How many planes
-                                                        # can use this route at the same time?
+        self.link_caps: Dict[Tuple[str, str], int] = {}  # How many planes
+        # can use this route at the same time?
         self.build_graph()
         self.calculate_paths()
 
@@ -31,8 +32,9 @@ class Simulation:
 
     def calculate_paths(self) -> None:
         paths = get_diverse_paths(
-            self.start_zone, self.end_zone, self.zones, self.graph, max_paths=2)
-        
+            self.start_zone, self.end_zone,
+            self.zones, self.graph, max_paths=2)
+
         if not paths:
             return
 
@@ -42,6 +44,13 @@ class Simulation:
                 d.path = list(chosen_path[1:])
 
     def run(self) -> None:
+        for name, zone in self.zones.items():
+            if name in (
+                 self.start_zone, self.end_zone) and zone.type == "blocked":
+                raise InvalidConfErr(
+                    "Start_zone and end_zone cannot be blocked"
+                )
+
         while not all(d.curr_loc == self.end_zone for d in self.drones):
             self.turn += 1
             movements: List[Tuple[str, str]] = []

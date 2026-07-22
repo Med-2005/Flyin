@@ -116,7 +116,7 @@ class MapParser:
                     Style.parse(mapped_color)
                     color = mapped_color
                 except Exception:
-                    color = None
+                    raise InvalidConfErr(f"Invalid color '{v}'")
             seen.add(k)
         if z_type not in ["normal", "blocked", "restricted", "priority"]:
             raise InvalidConfErr(f"Invalid type of zone '{z_type}'")

@@ -1,18 +1,11 @@
-nb_drones: 5
+# Easy Level 3: Basic capacity management
+nb_drones: 4
 
-start_hub: hub 0 0 [color=green]
-end_hub: goal 5 0 [color=yellow]
+start_hub: start 0 0 [color=orange]
+hub: bottleneck 1 0 [max_drones=2]
+hub: wide_area 2 0 [color=blue max_drones=3]
+end_hub: goal 3 0 [color=red]
 
-hub: A 1 0 [zone=normal color=blue]
-hub: B 2 0 [zone=restricted color=orange max_drones=2]
-hub: C 2 1 [zone=priority color=gold]
-hub: D 3 1 [zone=blocked color=black]
-hub: E 4 0 [zone=normal color=purple max_drones=1]
-
-connection: hub-A
-connection: A-B
-connection: A-C
-connection: B-E [max_link_capacity=1]
-connection: C-E
-connection: E-goal
-connection: A-D
+connection: start-bottleneck [max_link_capacity=4]
+connection: bottleneck-wide_area [max_link_capacity=4]
+connection: wide_area-goal [max_link_capacity=4]

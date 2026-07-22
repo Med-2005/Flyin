@@ -2,6 +2,7 @@ import sys
 from typing import Dict, List, Optional, Set, Tuple
 from exceptions import InvalidConfErr
 from models import Zone, Connection
+from rich.style import Style
 
 
 class MapParser:
@@ -19,8 +20,8 @@ class MapParser:
         try:
             with open(self.file_path, 'r') as f:
                 for line in f:
-                    line = line.strip()
-                    if not line or line.startswith('#'):
+                    line = line.split("#", 1)[0].strip()
+                    if not line:
                         continue
                     if ':' not in line:
                         raise InvalidConfErr(f"Invalid format: {line}")
@@ -41,7 +42,7 @@ class MapParser:
             self.validate_config()
             self.build_zones()
             self.build_connections()
-        except BaseException as e:
+        except Exception as e:
             print(f"Error: {e}")
             sys.exit(1)
 
@@ -81,17 +82,38 @@ class MapParser:
 
         name, x, y = items[0], int(items[1]), int(items[2])
         z_type, max_drones, color = "normal", 1, None
-
+        valid_meta_data = ["zone", "color", "max_drones"]
         for item in meta.split():
-            if '=' in item:
-                k, v = item.split('=', 1)
-                if k == 'zone':
-                    z_type = v
-                elif k == 'max_drones':
-                    max_drones = int(v)
-                elif k == 'color':
-                    color = v
+            if '=' not in item:
+                raise InvalidConfErr("Invalid key")
+            k, v = item.split('=', 1)
+            if k not in valid_meta_data:
+                raise InvalidConfErr("Invalid key")
+            if k == 'zone':
+                z_type = v
+            elif k == 'max_drones':
+                if int(v) < 0:
+                    raise InvalidConfErr("max_drones cannot be negative")
+                max_drones = int(v)
+            elif k == 'color':
+                color_map = {
+                    "orange": "dark_orange",
+                    "gray": "grey50",
+                    "brown": "yellow4",
+                    "purple": "purple",
+                    "gold": "gold1",
+                    "lime": "chartreuse1",
+                    "darkred": "dark_red",
+                    "rainbow": "magenta"
+                }
 
+                mapped_color = color_map.get(v.lower(), v)
+
+                try:
+                    Style.parse(mapped_color)
+                    color = mapped_color
+                except Exception:
+                    color = None
         if z_type not in ["normal", "blocked", "restricted", "priority"]:
             raise InvalidConfErr(f"Invalid type of zone '{z_type}'")
 
@@ -119,10 +141,19 @@ class MapParser:
             raise InvalidConfErr(f"Invalid connection: {raw}")
 
         mlc = 1
+        meta_data = ["max_link_capacity"]
         for item in meta.split():
-            if '=' in item:
-                k, v = item.split('=', 1)
-                if k == 'max_link_capacity':
-                    mlc = int(v)
+            if '=' not in item:
+                raise InvalidConfErr("Invalid Key")
+            k, v = item.split('=', 1)
+            if k not in meta_data:
+                raise InvalidConfErr("Invalid Key")
+            if k == 'max_link_capacity':
+                if int(v) < 0:
+                    raise InvalidConfErr("max_link_capacity"
+                          " cannot be ngative")
+                mlc = int(v)
+            else:
+                raise InvalidConfErr("Invalid Key")
 
         return Connection(stations[0].strip(), stations[1].strip(), mlc)

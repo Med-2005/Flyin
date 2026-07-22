@@ -34,7 +34,6 @@ class Simulation:
         paths = get_diverse_paths(
             self.start_zone, self.end_zone,
             self.zones, self.graph, max_paths=2)
-
         if not paths:
             return
 

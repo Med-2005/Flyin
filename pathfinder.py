@@ -68,6 +68,9 @@ def dijkstra_algo(start: str, end: str,
     path.reverse()
     return path
 
+# [goal, E, C, A, Hub]
+# [hub, a, c, e, goal]
+
 
 def get_diverse_paths(start: str, end: str,
                       zones: Dict[str, Zone],

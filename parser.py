@@ -83,10 +83,13 @@ class MapParser:
         name, x, y = items[0], int(items[1]), int(items[2])
         z_type, max_drones, color = "normal", 1, None
         valid_meta_data = ["zone", "color", "max_drones"]
+        seen  = set()
         for item in meta.split():
             if '=' not in item:
                 raise InvalidConfErr("Invalid key")
             k, v = item.split('=', 1)
+            if k in seen:
+                raise InvalidConfErr(f"Duplicate Key {k}")
             if k not in valid_meta_data:
                 raise InvalidConfErr("Invalid key")
             if k == 'zone':
@@ -114,6 +117,7 @@ class MapParser:
                     color = mapped_color
                 except Exception:
                     color = None
+            seen.add(k)
         if z_type not in ["normal", "blocked", "restricted", "priority"]:
             raise InvalidConfErr(f"Invalid type of zone '{z_type}'")
 
@@ -142,10 +146,13 @@ class MapParser:
 
         mlc = 1
         meta_data = ["max_link_capacity"]
+        seen = set()
         for item in meta.split():
             if '=' not in item:
                 raise InvalidConfErr("Invalid Key")
             k, v = item.split('=', 1)
+            if k in seen:
+                raise InvalidConfErr(f"Duplicate key {k}")
             if k not in meta_data:
                 raise InvalidConfErr("Invalid Key")
             if k == 'max_link_capacity':
@@ -153,6 +160,7 @@ class MapParser:
                     raise InvalidConfErr("max_link_capacity"
                           " cannot be ngative")
                 mlc = int(v)
+                seen.add(k)
             else:
                 raise InvalidConfErr("Invalid Key")
 

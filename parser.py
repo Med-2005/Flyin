@@ -18,6 +18,7 @@ class MapParser:
 
     def parse(self) -> None:
         try:
+            seen = set()
             with open(self.file_path, 'r') as f:
                 for line in f:
                     line = line.split("#", 1)[0].strip()
@@ -30,9 +31,15 @@ class MapParser:
                     if key == 'nb_drones':
                         self.set_nb_drones(value)
                     elif key == 'start_hub':
+                        if key in seen:
+                            raise InvalidConfErr("It cannot be more than one start")
                         self.start_hub_raw = value
+                        seen.add(key)
                     elif key == 'end_hub':
+                        if key in seen:
+                            raise InvalidConfErr("It cannot be more than one end")
                         self.end_hub_raw = value
+                        seen.add(key)
                     elif key == 'hub':
                         self.hubs_raw.append(value)
                     elif key == 'connection':
@@ -111,6 +118,8 @@ class MapParser:
                 }
 
                 mapped_color = color_map.get(v.lower(), v)
+                if not mapped_color:
+                    raise InvalidConfErr("Indicate a color")
 
                 try:
                     Style.parse(mapped_color)

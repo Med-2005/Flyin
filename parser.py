@@ -20,8 +20,20 @@ class MapParser:
         try:
             seen = set()
             with open(self.file_path, 'r') as f:
+                seen_start = False
                 for line in f:
+                    if line.startswith("start_hub"):
+                        seen_start = True
+
+                    elif line.startswith("hub"):
+                        if not seen_start:
+                            raise InvalidConfErr("start_hub"
+                                                 " must be defined"
+                                                 " before hubs")
                     line = line.split("#", 1)[0].strip()
+                    # if not line.startswith("nb_drones"):
+                    #     raise InvalidConfErr("nb_drones must "
+                    #                          "be the first line")
                     if not line:
                         continue
                     if ':' not in line:
@@ -32,12 +44,14 @@ class MapParser:
                         self.set_nb_drones(value)
                     elif key == 'start_hub':
                         if key in seen:
-                            raise InvalidConfErr("It cannot be more than one start")
+                            raise InvalidConfErr("It cannot "
+                                                 "be more than one start")
                         self.start_hub_raw = value
                         seen.add(key)
                     elif key == 'end_hub':
                         if key in seen:
-                            raise InvalidConfErr("It cannot be more than one end")
+                            raise InvalidConfErr("It cannot "
+                                                 "be more than one end")
                         self.end_hub_raw = value
                         seen.add(key)
                     elif key == 'hub':
@@ -90,7 +104,7 @@ class MapParser:
         name, x, y = items[0], int(items[1]), int(items[2])
         z_type, max_drones, color = "normal", 1, None
         valid_meta_data = ["zone", "color", "max_drones"]
-        seen  = set()
+        seen = set()
         for item in meta.split():
             if '=' not in item:
                 raise InvalidConfErr("Invalid key")
@@ -120,7 +134,6 @@ class MapParser:
                 mapped_color = color_map.get(v.lower(), v)
                 if not mapped_color:
                     raise InvalidConfErr("Indicate a color")
-
                 try:
                     Style.parse(mapped_color)
                     color = mapped_color

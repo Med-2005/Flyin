@@ -1,4 +1,5 @@
 from rich import print
+from webcolors import name_to_hex
 
 
 def print_turn(movements, zones):
@@ -12,7 +13,8 @@ def print_turn(movements, zones):
         zone = zones.get(dest_name)
 
         if zone and zone.color:
-            output.append(f"{drone_id}-[{zone.color}]{dest}[/]")
+            color = name_to_hex(zone.color)
+            output.append(f"{drone_id}-[{color}]{dest}[/]")
         else:
             output.append(f"{drone_id}-{dest}")
 

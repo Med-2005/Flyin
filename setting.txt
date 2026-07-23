@@ -1,25 +1,52 @@
-# Easy Level 3: Basic capacity management
-nb_drones: 9
-start_hub: start 0 1
-hub: A 1 0
-hub: B 1 1
-hub: C 1 2
-hub: D 2 0
-hub: E 2 1
-hub: F 2 2
-hub: G 3 1 [max_drones=3]
-end_hub: end 4 1
+# Hard Level 1: Complex maze with multiple dead ends and loops
+nb_drones: 8
 
-connection: start-A
-connection: start-B
-connection: start-C
+start_hub: start 0 0 [color=green]
+hub: maze_a1 1 0 [color=blue max_drones=2]
+hub: maze_a2 2 0 [color=blue]
+hub: maze_b1 1 1 [color=blue]
+hub: maze_b2 2 1 [color=blue max_drones=2]
+hub: maze_c1 1 2 [color=blue]
+hub: maze_c2 3 1 [color=blue max_drones=2]
+hub: dead_end1 0 1 [color=red max_drones=2]
+hub: dead_end2 0 2 [color=red]
+hub: dead_end3 2 -1 [color=red]
+hub: trap_loop1 4 0 [zone=restricted color=orange]
+hub: trap_loop2 4 2 [zone=restricted color=orange]
+hub: bottleneck 5 1 [color=yellow max_drones=2]
+hub: final_stretch1 6 0 [zone=priority color=cyan]
+hub: final_stretch2 6 1 [zone=priority color=cyan]
+hub: final_stretch3 6 2 [zone=priority color=cyan]
+end_hub: goal 7 1 [color=green]
 
-connection: A-D
-connection: B-E
-connection: C-F
+# Main path connections
+connection: start-maze_a1 [max_link_capacity=2]
+connection: maze_a1-maze_a2
+connection: maze_a1-maze_b1
+connection: maze_b1-maze_b2
+connection: maze_b2-maze_c2
+connection: maze_c2-maze_a2
+connection: maze_c2-bottleneck
 
-connection: D-G
-connection: E-G
-connection: F-G
+# Dead end traps
+connection: start-dead_end1 [max_link_capacity=2]
+connection: dead_end1-dead_end2
+connection: maze_a2-dead_end3
 
-connection: G-end
+# Trap loops
+connection: maze_a2-trap_loop1
+connection: trap_loop1-trap_loop2
+connection: trap_loop2-maze_c1
+
+# Alternative paths
+connection: maze_b1-maze_c1
+connection: maze_c1-maze_b2
+connection: maze_b2-maze_a2
+
+# Final stretch
+connection: bottleneck-final_stretch1
+connection: bottleneck-final_stretch2
+connection: bottleneck-final_stretch3
+connection: final_stretch1-goal
+connection: final_stretch2-goal
+connection: final_stretch3-goal

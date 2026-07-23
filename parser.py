@@ -21,21 +21,42 @@ class MapParser:
             seen = set()
             with open(self.file_path, 'r') as f:
                 seen_start = False
+                x = False
+                y = False
+                a = False
+                seen_connex = False
                 for line in f:
+                    line = line.split("#", 1)[0].strip()
+                    if not line:
+                        continue
+                    if line.startswith("nb_drones"):
+                        x = True
+                    elif line.startswith("start_hub"):
+                        if not x:
+                            raise InvalidConfErr("The nb_drones should be declared the first")
                     if line.startswith("start_hub"):
                         seen_start = True
-
-                    elif line.startswith("hub"):
+                    elif line.startswith("end_hub"):
                         if not seen_start:
                             raise InvalidConfErr("start_hub"
                                                  " must be defined"
+                                                 " before end_hub and hubs "
+                                                 "and connections")
+                    if line.startswith("connection"):
+                        y = True
+                    elif line.startswith("hub"):
+                        if not y:
+                            raise InvalidConfErr("end_hub"
+                                                 " must be defined"
                                                  " before hubs")
-                    line = line.split("#", 1)[0].strip()
-                    # if not line.startswith("nb_drones"):
-                    #     raise InvalidConfErr("nb_drones must "
-                    #                          "be the first line")
-                    if not line:
-                        continue
+                    if line.startswith("connection"):
+                        seen_connex = True
+                    elif line.startswith("hub"):
+                        if seen_connex:
+                            raise InvalidConfErr("hubs must be"
+                            " defined before connections")
+                    
+
                     if ':' not in line:
                         raise InvalidConfErr(f"Invalid format: {line}")
                     key, value = line.split(':', 1)
@@ -120,26 +141,7 @@ class MapParser:
                     raise InvalidConfErr("max_drones cannot be negative")
                 max_drones = int(v)
             elif k == 'color':
-                color_map = {
-                    "orange": "dark_orange",
-                    "gray": "grey50",
-                    "brown": "yellow4",
-                    "purple": "purple",
-                    "gold": "gold1",
-                    "lime": "chartreuse1",
-                    "darkred": "dark_red",
-                    "rainbow": "magenta"
-                }
-
-                mapped_color = color_map.get(v.lower(), v)
-                if not mapped_color:
-                    raise InvalidConfErr("Indicate a color")
-                try:
-                    Style.parse(mapped_color)
-                    color = mapped_color
-                except Exception:
-                    raise InvalidConfErr(f"Invalid color '{v}'")
-            seen.add(k)
+                color = v
         if z_type not in ["normal", "blocked", "restricted", "priority"]:
             raise InvalidConfErr(f"Invalid type of zone '{z_type}'")
 

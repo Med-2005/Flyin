@@ -1,6 +1,6 @@
 import heapq
 import math
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from models import Zone
 
 
@@ -77,18 +77,28 @@ def get_diverse_paths(start: str, end: str,
                       graph: Dict[str, List[str]],
                       max_paths: int = 2) -> List[List[str]]:
     paths = []
+    seen_paths = set()
     penalties: Dict[str, float] = {}
 
-    for _ in range(max_paths):
+    for _ in range(max_paths * 6):
         path = dijkstra_algo(start, end, zones, graph, penalties)
         if not path:
             break
 
-        paths.append(path)
+        path_key = tuple(path)
+        if path_key not in seen_paths:
+            paths.append(path)
+            seen_paths.add(path_key)
 
         for zone in path:
             if zone != start and zone != end:
-                if zones[zone].type == "restricted":
-                    penalties[zone] = penalties.get(zone, 0.0) + 100.0
+                capacity = zones[zone].max_drones
+                penalties[zone] = penalties.get(
+                    zone, 0.0) + (10.0 / capacity)
 
-    return paths
+    def path_score(path: List[str]) -> Tuple[int, float]:
+        cost = sum(get_move_cost(zones[zone].type) for zone in path[1:])
+        return len(path), cost
+
+    paths.sort(key=path_score)
+    return paths[:max_paths]

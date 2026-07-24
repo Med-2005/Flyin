@@ -1,6 +1,7 @@
 from rich import print
 from webcolors import name_to_hex
 
+
 def print_turn(movements, zones):
     if not movements:
         return

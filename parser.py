@@ -2,7 +2,6 @@ import sys
 from typing import Dict, List, Optional, Set, Tuple
 from exceptions import InvalidConfErr
 from models import Zone, Connection
-from rich.style import Style
 
 
 class MapParser:
@@ -23,7 +22,6 @@ class MapParser:
                 seen_start = False
                 x = False
                 y = False
-                a = False
                 seen_connex = False
                 for line in f:
                     line = line.split("#", 1)[0].strip()
@@ -33,7 +31,8 @@ class MapParser:
                         x = True
                     elif line.startswith("start_hub"):
                         if not x:
-                            raise InvalidConfErr("The nb_drones should be declared the first")
+                            raise InvalidConfErr("The nb_drones should"
+                                                 " be declared the first")
                     if line.startswith("start_hub"):
                         seen_start = True
                     elif line.startswith("end_hub"):
@@ -54,9 +53,7 @@ class MapParser:
                     elif line.startswith("hub"):
                         if seen_connex:
                             raise InvalidConfErr("hubs must be"
-                            " defined before connections")
-                    
-
+                                                 " defined before connections")
                     if ':' not in line:
                         raise InvalidConfErr(f"Invalid format: {line}")
                     key, value = line.split(':', 1)

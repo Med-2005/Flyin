@@ -5,13 +5,13 @@ MAP ?= setting.txt
 .PHONY: install run debug clean lint lint-strict
 
 install:
-	$(PIP) install flake8 mypy
+	@$(PIP) install flake8 mypy
 
 run:
-	$(PYTHON) main.py $(MAP)
+	@$(PYTHON) main.py $(MAP)
 
 debug:
-	$(PYTHON) -m pdb main.py $(MAP)
+	@$(PYTHON) -m pdb main.py $(MAP)
 
 clean:
 	rm -rf __pycache__

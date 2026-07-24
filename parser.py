@@ -19,41 +19,26 @@ class MapParser:
         try:
             seen = set()
             with open(self.file_path, 'r') as f:
-                seen_start = False
                 x = False
                 y = False
-                seen_connex = False
-                for line in f:
+                for num_lin, line in enumerate(f):
                     line = line.split("#", 1)[0].strip()
                     if not line:
                         continue
                     if line.startswith("nb_drones"):
                         x = True
-                    elif line.startswith("start_hub"):
+                    elif (
+                        line.startswith(("start_hub",
+                                         "hub", "end_hub",
+                                         "connection"))
+                    ):
                         if not x:
                             raise InvalidConfErr("The nb_drones should"
-                                                 " be declared the first")
-                    if line.startswith("start_hub"):
-                        seen_start = True
-                    elif line.startswith("end_hub"):
-                        if not seen_start:
-                            raise InvalidConfErr("start_hub"
-                                                 " must be defined"
-                                                 " before end_hub and hubs "
-                                                 "and connections")
-                    if line.startswith("connection"):
-                        y = True
-                    elif line.startswith("hub"):
-                        if not y:
-                            raise InvalidConfErr("end_hub"
-                                                 " must be defined"
-                                                 " before hubs")
-                    if line.startswith("connection"):
-                        seen_connex = True
-                    elif line.startswith("hub"):
-                        if seen_connex:
-                            raise InvalidConfErr("hubs must be"
-                                                 " defined before connections")
+                                                 " be declared "
+                                                 "the first "
+                                                 "the error is in line"
+                                                 f" number: {num_lin}")
+
                     if ':' not in line:
                         raise InvalidConfErr(f"Invalid format: {line}")
                     key, value = line.split(':', 1)
@@ -112,8 +97,10 @@ class MapParser:
 
     def parse_zone_string(self, raw: str) -> Zone:
         b_idx = raw.find('[')
+        b_idx2 = raw.find(']')
         core = raw[:b_idx].strip() if b_idx != -1 else raw.strip()
         meta = raw[b_idx + 1: -1].strip() if b_idx != -1 else ""
+        added = raw[b_idx2 + 1:].strip() if meta != -1 else ""
 
         items = core.split()
         if len(items) != 3 or '-' in items[0]:
@@ -125,12 +112,12 @@ class MapParser:
         seen = set()
         for item in meta.split():
             if '=' not in item:
-                raise InvalidConfErr("Invalid key")
+                raise InvalidConfErr(f"Invalid key: {item}")
             k, v = item.split('=', 1)
             if k in seen:
-                raise InvalidConfErr(f"Duplicate Key {k}")
+                raise InvalidConfErr(f"Duplicate Key: {k}")
             if k not in valid_meta_data:
-                raise InvalidConfErr("Invalid key")
+                raise InvalidConfErr(f"Invalid key: {k}")
             if k == 'zone':
                 z_type = v
             elif k == 'max_drones':
@@ -139,6 +126,9 @@ class MapParser:
                 max_drones = int(v)
             elif k == 'color':
                 color = v
+            if added:
+                raise InvalidConfErr(f"Invalid key {added}")
+            seen.add(k)
         if z_type not in ["normal", "blocked", "restricted", "priority"]:
             raise InvalidConfErr(f"Invalid type of zone '{z_type}'")
 
@@ -156,9 +146,11 @@ class MapParser:
 
     def parse_connection_string(self, raw: str) -> Connection:
         b_idx = raw.find('[')
-        core = raw[:b_idx].strip() if b_idx != -1 else raw.strip()
-        meta = raw[b_idx + 1: -1].strip() if b_idx != -1 else ""
+        b_idx2 = raw.find(']')
 
+        core = raw[:b_idx].strip() if b_idx != -1 else raw.strip()
+        meta = raw[b_idx + 1: b_idx2].strip() if b_idx != -1 else ""
+        added = raw[b_idx2 + 1:].strip() if b_idx != -1 else ""
         stations = core.split('-')
         if (len(stations) != 2 or
                 stations[0] not in self.zones or
@@ -169,20 +161,23 @@ class MapParser:
         meta_data = ["max_link_capacity"]
         seen = set()
         for item in meta.split():
-            if '=' not in item:
-                raise InvalidConfErr("Invalid Key")
+            if item == "max_link_capacity":
+                if '=' not in item:
+                    raise InvalidConfErr(f"Invalid format: {item} "
+                                         "Expected: "
+                                         "max_link_capacity=number.")
             k, v = item.split('=', 1)
             if k in seen:
-                raise InvalidConfErr(f"Duplicate key {k}")
+                raise InvalidConfErr(f"Duplicate key: {k}")
             if k not in meta_data:
-                raise InvalidConfErr("Invalid Key")
+                raise InvalidConfErr(f"Invalid Key: {k}")
             if k == 'max_link_capacity':
                 if int(v) < 0:
                     raise InvalidConfErr("max_link_capacity"
-                          " cannot be ngative")
+                          " cannot be negative")
                 mlc = int(v)
                 seen.add(k)
-            else:
-                raise InvalidConfErr("Invalid Key")
+            if added:
+                raise InvalidConfErr(f"Invalid Key: {added}")
 
         return Connection(stations[0].strip(), stations[1].strip(), mlc)

@@ -31,7 +31,9 @@ class Simulation:
     def run(self) -> None:
         for name, zone in self.zones.items():
             if name in (self.start_zone, self.end_zone) and zone.type == "blocked":
-                raise InvalidConfErr("Start_zone and end_zone cannot be blocked")
+                line = f"Line {zone.line_number}: " if zone.line_number else ""
+                raise InvalidConfErr(
+                    f"{line}Start_zone and end_zone cannot be blocked")
 
         while not all(d.curr_loc == self.end_zone for d in self.drones):
             self.turn += 1

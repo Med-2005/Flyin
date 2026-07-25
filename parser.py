@@ -1,25 +1,36 @@
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, NoReturn, Optional, Set, Tuple
 from exceptions import InvalidConfErr
 from models import Zone, Connection
 # import sys
+
+
+RawLine = Tuple[int, str]
 
 
 class MapParser:
     def __init__(self, file_path: str) -> None:
         self.file_path: str = file_path
         self.nb_drones: int = 0
+        self.nb_drones_line: Optional[int] = None
         self.start_hub_raw: Optional[str] = None
+        self.start_hub_line: Optional[int] = None
         self.end_hub_raw: Optional[str] = None
-        self.hubs_raw: List[str] = []
-        self.connections_raw: List[str] = []
+        self.end_hub_line: Optional[int] = None
+        self.hubs_raw: List[RawLine] = []
+        self.connections_raw: List[RawLine] = []
         self.zones: Dict[str, Zone] = {}
         self.connections: List[Connection] = []
+        self.last_line_number: int = 0
+
+    def raise_line_error(self, line_number: int, message: str) -> NoReturn:
+        raise InvalidConfErr(f"Line {line_number}: {message}")
 
     def parse(self) -> None:
         seen = set()
         with open(self.file_path, 'r') as f:
             x = False
             for num_lin, line in enumerate(f, start=1):
+                self.last_line_number = num_lin
                 line = line.split("#", 1)[0].strip()
                 if not line:
                     continue
@@ -31,95 +42,105 @@ class MapParser:
                                      "connection"))
                 ):
                     if not x:
-                        raise InvalidConfErr(
-                            f"Line {num_lin}:"
-                            " nb_drones must be declared first.")
+                        self.raise_line_error(
+                            num_lin, "nb_drones must be declared first.")
                 if ':' not in line:
-                    raise InvalidConfErr(f"Line: {num_lin}"
-                                         f"Invalid format : {line}")
+                    self.raise_line_error(
+                        num_lin, f"Invalid format: {line}")
                 key, value = line.split(':', 1)
                 key, value = key.strip(), value.strip()
                 if key == 'nb_drones':
                     if key in seen:
-                        raise InvalidConfErr(f"Line: {num_lin} "
-                                            "Duplicate "
-                                                f"nb_drones: '{line}'")
+                        self.raise_line_error(
+                            num_lin, f"Duplicate nb_drones: '{line}'")
                     seen.add(key)
-                    self.set_nb_drones(value)
+                    self.nb_drones_line = num_lin
+                    self.set_nb_drones(value, num_lin)
                 elif key == 'start_hub':
                     if key in seen:
-                        raise InvalidConfErr(f"Line: {num_lin}"
-                                                " Only one start_hub "
-                                                "is allowed")
+                        self.raise_line_error(
+                            num_lin, "Only one start_hub is allowed")
                     self.start_hub_raw = value
+                    self.start_hub_line = num_lin
                     seen.add(key)
                 elif key == 'end_hub':
                     if key in seen:
-                        raise InvalidConfErr(f"Line: {num_lin}: "
-                                                "Only one end is allowed")
+                        self.raise_line_error(
+                            num_lin, "Only one end_hub is allowed")
                     self.end_hub_raw = value
+                    self.end_hub_line = num_lin
                     seen.add(key)
                 elif key == 'hub':
-                    self.hubs_raw.append(value)
+                    self.hubs_raw.append((num_lin, value))
                 elif key == 'connection':
-                    self.connections_raw.append(value)
+                    self.connections_raw.append((num_lin, value))
                 else:
-                    raise InvalidConfErr(f"Line: {num_lin} "
-                                            f"Unknown key: {key}")
+                    self.raise_line_error(num_lin, f"Unknown key: {key}")
         self.validate_config()
         self.build_zones()
         self.build_connections()
 
-    def set_nb_drones(self, value: str) -> None:
-        drones = int(value)
+    def set_nb_drones(self, value: str, line_number: int) -> None:
+        try:
+            drones = int(value)
+        except ValueError:
+            self.raise_line_error(line_number, "nb_drones must be a number")
         if drones <= 0:
-            raise InvalidConfErr("Number of drones must be > 0")
+            self.raise_line_error(line_number, "Number of drones must be > 0")
         self.nb_drones = drones
 
     def validate_config(self) -> None:
+        line_number = max(1, self.last_line_number)
+        if self.nb_drones_line is None:
+            self.raise_line_error(line_number, "nb_drones is required")
         if not self.start_hub_raw or not self.end_hub_raw:
-            raise InvalidConfErr("start_hub and end_hub are required")
+            self.raise_line_error(
+                line_number, "start_hub and end_hub are required")
         if not self.connections_raw:
-            raise InvalidConfErr("At least one connection required")
+            self.raise_line_error(line_number, "At least one connection required")
 
     def build_zones(self) -> None:
-        lista = []
+        coordinates: Dict[Tuple[int, int], int] = {}
         if self.start_hub_raw:
-            sz = self.parse_zone_string(self.start_hub_raw)
+            line_number = self.start_hub_line or 0
+            sz = self.parse_zone_string(self.start_hub_raw, line_number)
             self.zones[sz.name] = sz
-            lista.append(sz.x)
-            lista.append(sz.y)
+            coordinates[(sz.x, sz.y)] = line_number
         if self.end_hub_raw:
-            ez = self.parse_zone_string(self.end_hub_raw)
+            line_number = self.end_hub_line or 0
+            ez = self.parse_zone_string(self.end_hub_raw, line_number)
             self.zones[ez.name] = ez
-            lista.append(ez.x)
-            lista.append(ez.y)
-        for hub_raw in self.hubs_raw:
-            z = self.parse_zone_string(hub_raw)
+            point = (ez.x, ez.y)
+            if point in coordinates:
+                self.raise_line_error(line_number, f"Duplicate coordinate: {point}")
+            coordinates[point] = line_number
+        for line_number, hub_raw in self.hubs_raw:
+            z = self.parse_zone_string(hub_raw, line_number)
             if z.name in self.zones:
-                raise InvalidConfErr(f"Duplicate zone: {z.name}")
+                self.raise_line_error(line_number, f"Duplicate zone: {z.name}")
             self.zones[z.name] = z
-            lista.append(z.x)
-            lista.append(z.y)
-        res = [(lista[i], lista[i + 1]) for i in range(0, len(lista), 2)]
+            point = (z.x, z.y)
+            if point in coordinates:
+                self.raise_line_error(line_number, f"Duplicate coordinate: {point}")
+            coordinates[point] = line_number
 
-        seen = set()
-        for i in res:
-            if i in seen:
-                raise InvalidConfErr(f"Duplicate coordinate: {i}")
-            seen.add(i)
-
-    def parse_zone_string(self, raw: str) -> Zone:
+    def parse_zone_string(self, raw: str, line_number: int) -> Zone:
         b_idx = raw.find('[')
         b_idx2 = raw.find(']')
+        if (b_idx == -1) != (b_idx2 == -1) or b_idx2 < b_idx:
+            self.raise_line_error(line_number, f"Invalid zone: {raw}")
         core = raw[:b_idx].strip() if b_idx != -1 else raw.strip()
-        meta = raw[b_idx + 1: -1].strip() if b_idx != -1 else ""
-        added = raw[b_idx2 + 1:].strip() if meta != -1 else ""
+        meta = raw[b_idx + 1: b_idx2].strip() if b_idx != -1 else ""
+        added = raw[b_idx2 + 1:].strip() if b_idx != -1 else ""
         items = core.split()
         if len(items) != 3 or '-' in items[0] or ' ' in items[0]:
-            raise InvalidConfErr(f"Invalid zone: {raw}")
+            self.raise_line_error(line_number, f"Invalid zone: {raw}")
 
-        name, x, y = items[0], int(items[1]), int(items[2])
+        try:
+            name, x, y = items[0], int(items[1]), int(items[2])
+        except ValueError:
+            self.raise_line_error(
+                line_number, f"Invalid zone coordinates: {raw}")
         z_type, max_drones, color = "normal", 1, None
         valid_meta_data = ["zone", "color", "max_drones"]
         seen = set()
@@ -127,52 +148,59 @@ class MapParser:
         if meta:
             for item in meta.split():
                 if '=' not in item:
-                    raise InvalidConfErr(f"Invalid key: {item}")
+                    self.raise_line_error(line_number, f"Invalid key: {item}")
                 k, v = item.split('=', 1)
                 if k in seen:
-                    raise InvalidConfErr(f"Duplicate Key: {k}")
+                    self.raise_line_error(line_number, f"Duplicate key: {k}")
                 if k not in valid_meta_data:
-                    raise InvalidConfErr(f"Invalid key: {k}")
+                    self.raise_line_error(line_number, f"Invalid key: {k}")
                 if k == 'zone':
                     z_type = v
                 elif k == 'max_drones':
                     if v == "":
-                        raise InvalidConfErr(f"Value of max_drones"
-                                            f" cannot be '{v}'")
-                    if int(v) <= 0:
-                        raise InvalidConfErr("max_drones must"
-                                            " be greater than 0")
-                    max_drones = int(v)
+                        self.raise_line_error(
+                            line_number, f"Value of max_drones cannot be '{v}'")
+                    try:
+                        max_drones = int(v)
+                    except ValueError:
+                        self.raise_line_error(
+                            line_number, "max_drones must be a number")
+                    if max_drones <= 0:
+                        self.raise_line_error(
+                            line_number, "max_drones must be greater than 0")
                 elif k == 'color':
                     if v == "":
-                        raise InvalidConfErr("Value of color cannot be empty")
+                        self.raise_line_error(
+                            line_number, "Value of color cannot be empty")
                     color = v
                 seen.add(k)
             if z_type == "":
-                raise InvalidConfErr("Type of zone cannot be empty")
+                self.raise_line_error(line_number, "Type of zone cannot be empty")
             if z_type not in ["normal", "blocked", "restricted", "priority"]:
-                raise InvalidConfErr(
-                    f"Invalid type of zone '{z_type}'"
-                    " it should be 'zone=<type>'")
+                self.raise_line_error(
+                    line_number,
+                    f"Invalid type of zone '{z_type}' it should be 'zone=<type>'")
             if added:
-                raise InvalidConfErr(f"Invalid k {added}")
+                self.raise_line_error(line_number, f"Invalid key: {added}")
 
-        return Zone(name, x, y, z_type, max_drones, color)
+        return Zone(name, x, y, z_type, max_drones, color, line_number)
 
     def build_connections(self) -> None:
         seen: Set[Tuple[str, str]] = set()
-        for raw in self.connections_raw:
-            c = self.parse_connection_string(raw)
+        for line_number, raw in self.connections_raw:
+            c = self.parse_connection_string(raw, line_number)
             if (c.zone1, c.zone2) in seen or (c.zone2, c.zone1) in seen:
-                raise InvalidConfErr(
-                    f"Duplicate connection: {c.zone1}-{c.zone2}")
+                self.raise_line_error(
+                    line_number, f"Duplicate connection: {c.zone1}-{c.zone2}")
             seen.add((c.zone1, c.zone2))
             self.connections.append(c)
 
-    def parse_connection_string(self, raw: str) -> Connection:
+    def parse_connection_string(self, raw: str, line_number: int) -> Connection:
         try:
             b_idx = raw.find('[')
             b_idx2 = raw.find(']')
+            if (b_idx == -1) != (b_idx2 == -1) or b_idx2 < b_idx:
+                self.raise_line_error(line_number, f"Invalid connection: {raw}")
 
             core = raw[:b_idx].strip() if b_idx != -1 else raw.strip()
             meta = raw[b_idx + 1: b_idx2].strip() if b_idx != -1 else ""
@@ -181,7 +209,7 @@ class MapParser:
             if (len(stations) != 2 or
                     stations[0] not in self.zones or
                     stations[1] not in self.zones):
-                raise InvalidConfErr(f"Invalid connection: {raw}")
+                self.raise_line_error(line_number, f"Invalid connection: {raw}")
 
             mlc = 1
             seen = set()
@@ -189,24 +217,27 @@ class MapParser:
             meta_data = ["max_link_capacity"]
             for item in meta.split():
                 if '=' not in item:
-                    raise InvalidConfErr(f"Invalid format: {item} "
-                                         "Expected: "
-                                         "max_link_capacity=number.")
+                    self.raise_line_error(
+                        line_number,
+                        f"Invalid format: {item} Expected: max_link_capacity=number.")
                 k, v = item.split('=', 1)
                 if k in seen:
-                    raise InvalidConfErr(f"Duplicate key: {k}")
+                    self.raise_line_error(line_number, f"Duplicate key: {k}")
                 if k not in meta_data:
-                    raise InvalidConfErr(f"Invalid Key: {k}")
+                    self.raise_line_error(line_number, f"Invalid key: {k}")
                 if k in meta_data:
                     value = int(v)
                     if value <= 0:
-                        raise InvalidConfErr("value should be greater than 0")
+                        self.raise_line_error(
+                            line_number, "value should be greater than 0")
                     mlc = int(v)
                     seen.add(k)
                 if added:
-                    raise InvalidConfErr(f"Invalid Key: {added}")
-            return Connection(stations[0].strip(), stations[1].strip(), mlc)
+                    self.raise_line_error(line_number, f"Invalid key: {added}")
+            return Connection(
+                stations[0].strip(), stations[1].strip(), mlc, line_number)
         except ValueError:
-            raise InvalidConfErr("Inalid format it "
-                                 "should be like this "
-                                 "'max_link_capacity=number'")
+            self.raise_line_error(
+                line_number,
+                "Invalid format it should be like this "
+                "'max_link_capacity=number'")

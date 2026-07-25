@@ -25,7 +25,6 @@ def main() -> None:
         parser.zones, parser.connections, parser.nb_drones,
         start_name, end_name)
     sim.run()
-    print(f"\nTotal moves (turns): {sim.turn}")
 
 
 if __name__ == "__main__":
@@ -33,3 +32,4 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         print(f"Errors happens: {e}")
+        sys.exit(1)

@@ -1,11 +1,20 @@
+# Easy Level 1: Simple linear path
 
-nb_drones: 100000
-
-start_hub: start 0 1
-hub: waypoint1 1 0
-hub: waypoint2 2 0
-end_hub: goal 0 0
-
-connection: start-goal
+nb_drones: 20
+start_hub: start 0 0 [color=green]
+hub: waypoint1 1 0 [color=blue]
+hub: waypoint2 2 0 [color=blue]
+end_hub: goal 3 0 [color=red]
 
 
+connection: start-waypoint1 [max_link_capacity=2]
+connection: waypoint1-waypoint2
+connection: waypoint2-goal
+
+
+# []] at connection
+# [ at zone name
+# declare connetion before hub exist
+# duplicate nb_drones
+# reject 0 at max_drones and max_link_capacity
+# [color==blue]

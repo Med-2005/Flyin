@@ -1,3 +1,2 @@
 class InvalidConfErr(Exception):
     pass
-

@@ -33,9 +33,9 @@ class Simulation:
     def calculate_paths(self) -> None:
         paths = get_diverse_paths(
             self.start_zone, self.end_zone,
-            self.zones, self.graph, max_paths=2)
+            self.zones, self.graph, max_paths=1)
         if not paths:
-            return
+            raise InvalidConfErr("No path found")
 
         for i, d in enumerate(self.drones):
             chosen_path = paths[i % len(paths)]

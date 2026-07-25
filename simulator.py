@@ -1,14 +1,11 @@
 from typing import Dict, List, Tuple
 from models import Zone, Connection, Drone
-from pathfinder import get_diverse_paths
+from pathfinder import SimulationRouter
 from display import print_turn
 from exceptions import InvalidConfErr
 
-
 class Simulation:
-    def __init__(self, zones: Dict[str, Zone],
-                 connections: List[Connection],
-                 nb_drones: int, start_zone: str, end_zone: str):
+    def __init__(self, zones: Dict[str, Zone], connections: List[Connection], nb_drones: int, start_zone: str, end_zone: str):
         self.zones = zones
         self.connections = connections
         self.nb_drones = nb_drones
@@ -17,9 +14,7 @@ class Simulation:
         self.drones = [Drone(f"D{i+1}", start_zone) for i in range(nb_drones)]
         self.turn = 0
         self.graph: Dict[str, List[str]] = {name: [] for name in self.zones}
-        # where can i go
-        self.link_caps: Dict[Tuple[str, str], int] = {}  # How many planes
-        # can use this route at the same time?
+        self.link_caps: Dict[Tuple[str, str], int] = {}
         self.build_graph()
         self.calculate_paths()
 
@@ -31,86 +26,56 @@ class Simulation:
             self.link_caps[(c.zone2, c.zone1)] = c.max_link_capacity
 
     def calculate_paths(self) -> None:
-        paths = get_diverse_paths(
-            self.start_zone, self.end_zone,
-            self.zones, self.graph, max_paths=1)
-        if not paths:
-            raise InvalidConfErr("No path found")
-
-        for i, d in enumerate(self.drones):
-            chosen_path = paths[i % len(paths)]
-            if chosen_path and chosen_path[0] == self.start_zone:
-                d.path = list(chosen_path[1:])
+        self.router = SimulationRouter(self.zones, self.graph, self.link_caps)
 
     def run(self) -> None:
         for name, zone in self.zones.items():
-            if name in (
-                 self.start_zone, self.end_zone) and zone.type == "blocked":
-                raise InvalidConfErr(
-                    "Start_zone and end_zone cannot be blocked"
-                )
+            if name in (self.start_zone, self.end_zone) and zone.type == "blocked":
+                raise InvalidConfErr("Start_zone and end_zone cannot be blocked")
 
         while not all(d.curr_loc == self.end_zone for d in self.drones):
             self.turn += 1
             movements: List[Tuple[str, str]] = []
 
-            zone_occ = {z: 0 for z in self.zones}
-            for d in self.drones:
-                if d.state == "waiting" and d.curr_loc not in (
-                        self.start_zone, self.end_zone):
-                    zone_occ[d.curr_loc] += 1
-
-            link_occ = {}
-            for k in self.link_caps:
-                link_occ[k] = 0
-
             for d in self.drones:
                 if d.curr_loc == self.end_zone:
                     continue
-
                 if d.state == "moving" and d.target:
                     d.curr_loc = d.target
                     d.state = "waiting"
                     movements.append((d.id, d.curr_loc))
-                    if d.curr_loc not in (self.start_zone, self.end_zone):
-                        zone_occ[d.curr_loc] += 1
                     d.target = None
-                    continue
 
-                if not d.path:
-                    continue
+            active_drones = [d for d in self.drones if d.curr_loc != self.end_zone and d.state == "waiting"]
+            active_drones.sort(key=lambda d: 1 if d.curr_loc == self.start_zone else 0)
 
-                next_zone = d.path[0]
-                z_obj = self.zones[next_zone]
-                link = (d.curr_loc, next_zone)
+            for d in active_drones:
+                next_step = self.router.find_dynamic_step(d.curr_loc, self.end_zone, self.turn)
+                
+                if next_step:
+                    next_zone, arrival_turn = next_step
+                    
+                    if next_zone == d.curr_loc:
+                        self.router.reserve_step(d.curr_loc, d.curr_loc, self.turn, arrival_turn)
+                        continue
 
-                can_move_link = link_occ.get(
-                    link, 0) < self.link_caps.get(link, 1)
-                can_move_zone = zone_occ[
-                    next_zone] < z_obj.max_drones or next_zone == self.end_zone
+                    z_obj = self.zones[next_zone]
+                    self.router.reserve_step(d.curr_loc, next_zone, self.turn, arrival_turn)
 
-                if can_move_link and can_move_zone:
                     if z_obj.type == "restricted":
                         d.state = "moving"
                         d.target = next_zone
-                        d.path.pop(0)
-                        link_occ[link] += 1
-                        zone_occ[next_zone] += 1
-                        if d.curr_loc not in (self.start_zone, self.end_zone):
-                            zone_occ[d.curr_loc] -= 1
                         movements.append((d.id, f"{d.curr_loc}-{next_zone}"))
                     else:
-                        prev_loc = d.curr_loc
                         d.curr_loc = next_zone
-                        d.path.pop(0)
-                        link_occ[link] += 1
-                        zone_occ[next_zone] += 1
-                        if prev_loc not in (self.start_zone, self.end_zone):
-                            zone_occ[prev_loc] -= 1
                         movements.append((d.id, next_zone))
 
             if movements:
                 movements.sort(key=lambda x: int(x[0][1:]))
                 print_turn(movements, self.zones)
             else:
-                break
+                waiting_drones = [d for d in self.drones if d.curr_loc != self.end_zone]
+                if all(d.state == "waiting" and d.curr_loc == self.start_zone for d in waiting_drones):
+                    break 
+                
+        print(f"\nTotal moves (turns): {self.turn}")

@@ -116,45 +116,46 @@ class MapParser:
         meta = raw[b_idx + 1: -1].strip() if b_idx != -1 else ""
         added = raw[b_idx2 + 1:].strip() if meta != -1 else ""
         items = core.split()
-        if len(items) != 3 or '-' in items[0]:
+        if len(items) != 3 or '-' in items[0] or ' ' in items[0]:
             raise InvalidConfErr(f"Invalid zone: {raw}")
 
         name, x, y = items[0], int(items[1]), int(items[2])
         z_type, max_drones, color = "normal", 1, None
         valid_meta_data = ["zone", "color", "max_drones"]
         seen = set()
-        for item in meta.split():
-            if '=' not in item:
-                raise InvalidConfErr(f"Invalid key: {item}")
-            k, v = item.split('=', 1)
-            if k in seen:
-                raise InvalidConfErr(f"Duplicate Key: {k}")
-            if k not in valid_meta_data:
-                raise InvalidConfErr(f"Invalid key: {k}")
-            if k == 'zone':
-                z_type = v
-            elif k == 'max_drones':
-                if v == "":
-                    raise InvalidConfErr(f"Value of max_drones"
-                                         f" cannot be '{v}'")
-                if int(v) <= 0:
-                    raise InvalidConfErr("max_drones must"
-                                         " be greater than 0")
-                max_drones = int(v)
-            elif k == 'color':
-                if v == "":
-                    raise InvalidConfErr("Value of color cannot be empty")
 
-                color = v
-        if added:
-            raise InvalidConfErr(f"Invalid key {added}")
-            seen.add(k)
-        if z_type == "":
-            raise InvalidConfErr("Type of zone cannot be empty")
-        if z_type not in ["normal", "blocked", "restricted", "priority"]:
-            raise InvalidConfErr(
-                f"Invalid type of zone '{z_type}'"
-                " it should be 'zone=<type>'")
+        if meta:
+            for item in meta.split():
+                if '=' not in item:
+                    raise InvalidConfErr(f"Invalid key: {item}")
+                k, v = item.split('=', 1)
+                if k in seen:
+                    raise InvalidConfErr(f"Duplicate Key: {k}")
+                if k not in valid_meta_data:
+                    raise InvalidConfErr(f"Invalid key: {k}")
+                if k == 'zone':
+                    z_type = v
+                elif k == 'max_drones':
+                    if v == "":
+                        raise InvalidConfErr(f"Value of max_drones"
+                                            f" cannot be '{v}'")
+                    if int(v) <= 0:
+                        raise InvalidConfErr("max_drones must"
+                                            " be greater than 0")
+                    max_drones = int(v)
+                elif k == 'color':
+                    if v == "":
+                        raise InvalidConfErr("Value of color cannot be empty")
+                    color = v
+                seen.add(k)
+            if z_type == "":
+                raise InvalidConfErr("Type of zone cannot be empty")
+            if z_type not in ["normal", "blocked", "restricted", "priority"]:
+                raise InvalidConfErr(
+                    f"Invalid type of zone '{z_type}'"
+                    " it should be 'zone=<type>'")
+            if added:
+                raise InvalidConfErr(f"Invalid k {added}")
 
         return Zone(name, x, y, z_type, max_drones, color)
 
@@ -202,9 +203,8 @@ class MapParser:
                         raise InvalidConfErr("value should be greater than 0")
                     mlc = int(v)
                     seen.add(k)
-            if added:
-                raise InvalidConfErr(f"Invalid Key: {added}")
-
+                if added:
+                    raise InvalidConfErr(f"Invalid Key: {added}")
             return Connection(stations[0].strip(), stations[1].strip(), mlc)
         except ValueError:
             raise InvalidConfErr("Inalid format it "

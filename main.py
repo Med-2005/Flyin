@@ -33,3 +33,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Errors happens: {e}")
         sys.exit(1)
+    except KeyboardInterrupt:
+        print("Exit Safely")
+        sys.exit(1)

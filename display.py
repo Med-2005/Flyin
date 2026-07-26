@@ -27,7 +27,7 @@ def print_turn(movements, zones):
         zone = zones.get(dest_name)
 
         if zone and zone.color:
-            line = f"Line: {line_number}: " if zones.line_number else ""
+            line = f"Line: {zone.line_number}: " if zone.line_number else ""
             if zone.color not in custom_colors and zone.color not in names():
                 raise InvalidConfErr(
                     f"{line}Invalid color: {zone.color}")

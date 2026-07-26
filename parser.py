@@ -97,7 +97,8 @@ class MapParser:
             self.raise_line_error(
                 line_number, "start_hub and end_hub are required")
         if not self.connections_raw:
-            self.raise_line_error(line_number, "At least one connection required")
+            self.raise_line_error(line_number, "At least one "
+                                  " connection required")
 
     def build_zones(self) -> None:
         coordinates: Dict[Tuple[int, int], int] = {}
@@ -112,7 +113,8 @@ class MapParser:
             self.zones[ez.name] = ez
             point = (ez.x, ez.y)
             if point in coordinates:
-                self.raise_line_error(line_number, f"Duplicate coordinate: {point}")
+                self.raise_line_error(
+                    line_number, f"Duplicate coordinate: {point}")
             coordinates[point] = line_number
         for line_number, hub_raw in self.hubs_raw:
             z = self.parse_zone_string(hub_raw, line_number)
@@ -121,7 +123,8 @@ class MapParser:
             self.zones[z.name] = z
             point = (z.x, z.y)
             if point in coordinates:
-                self.raise_line_error(line_number, f"Duplicate coordinate: {point}")
+                self.raise_line_error(
+                    line_number, f"Duplicate coordinate: {point}")
             coordinates[point] = line_number
 
     def parse_zone_string(self, raw: str, line_number: int) -> Zone:
@@ -144,6 +147,12 @@ class MapParser:
         z_type, max_drones, color = "normal", 1, None
         valid_meta_data = ["zone", "color", "max_drones"]
         seen = set()
+        if not meta:
+            add = raw[b_idx2 + 1:] if b_idx2 != -1 else ""
+            if add:
+                raise self.raise_line_error(
+                    line_number, f"Invalid key {add}"
+                )
 
         if meta:
             for item in meta.split():
@@ -159,7 +168,8 @@ class MapParser:
                 elif k == 'max_drones':
                     if v == "":
                         self.raise_line_error(
-                            line_number, f"Value of max_drones cannot be '{v}'")
+                            line_number, "Value of "
+                            f"max_drones cannot be '{v}'")
                     try:
                         max_drones = int(v)
                     except ValueError:
@@ -175,11 +185,13 @@ class MapParser:
                     color = v
                 seen.add(k)
             if z_type == "":
-                self.raise_line_error(line_number, "Type of zone cannot be empty")
+                self.raise_line_error(
+                    line_number, "Type of zone cannot be empty")
             if z_type not in ["normal", "blocked", "restricted", "priority"]:
                 self.raise_line_error(
                     line_number,
-                    f"Invalid type of zone '{z_type}' it should be 'zone=<type>'")
+                    f"Invalid type of zone '{z_type}'"
+                    " it should be 'zone=<type>'")
             if added:
                 self.raise_line_error(line_number, f"Invalid key: {added}")
 
@@ -195,12 +207,14 @@ class MapParser:
             seen.add((c.zone1, c.zone2))
             self.connections.append(c)
 
-    def parse_connection_string(self, raw: str, line_number: int) -> Connection:
+    def parse_connection_string(
+            self, raw: str, line_number: int) -> Connection:
         try:
             b_idx = raw.find('[')
             b_idx2 = raw.find(']')
             if (b_idx == -1) != (b_idx2 == -1) or b_idx2 < b_idx:
-                self.raise_line_error(line_number, f"Invalid connection: {raw}")
+                self.raise_line_error(
+                    line_number, f"Invalid connection: {raw}")
 
             core = raw[:b_idx].strip() if b_idx != -1 else raw.strip()
             meta = raw[b_idx + 1: b_idx2].strip() if b_idx != -1 else ""
@@ -209,7 +223,8 @@ class MapParser:
             if (len(stations) != 2 or
                     stations[0] not in self.zones or
                     stations[1] not in self.zones):
-                self.raise_line_error(line_number, f"Invalid connection: {raw}")
+                self.raise_line_error(
+                    line_number, f"Invalid connection: {raw}")
 
             mlc = 1
             seen = set()
@@ -219,7 +234,8 @@ class MapParser:
                 if '=' not in item:
                     self.raise_line_error(
                         line_number,
-                        f"Invalid format: {item} Expected: max_link_capacity=number.")
+                        f"Invalid format: {item} "
+                        "Expected: max_link_capacity=number.")
                 k, v = item.split('=', 1)
                 if k in seen:
                     self.raise_line_error(line_number, f"Duplicate key: {k}")

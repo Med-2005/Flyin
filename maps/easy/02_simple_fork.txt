@@ -31,4 +31,3 @@ connection: start-path_b [max_link_capacity=2]
 connection: path_b-goal [max_link_capacity=2]
 
 
-queue = [(path_b, 1, min()), (path_a_3, 1, 1-)]

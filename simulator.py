@@ -4,8 +4,11 @@ from pathfinder import SimulationRouter
 from display import print_turn
 from exceptions import InvalidConfErr
 
+
 class Simulation:
-    def __init__(self, zones: Dict[str, Zone], connections: List[Connection], nb_drones: int, start_zone: str, end_zone: str):
+    def __init__(
+        self, zones: Dict[str, Zone], connections: List[Connection],
+            nb_drones: int, start_zone: str, end_zone: str):
         self.zones = zones
         self.connections = connections
         self.nb_drones = nb_drones
@@ -30,10 +33,10 @@ class Simulation:
 
     def run(self) -> None:
         for name, zone in self.zones.items():
-            if name in (self.start_zone, self.end_zone) and zone.type == "blocked":
+            if name in self.end_zone and zone.type == "blocked":
                 line = f"Line {zone.line_number}: " if zone.line_number else ""
                 raise InvalidConfErr(
-                    f"{line}Start_zone and end_zone cannot be blocked")
+                    f"{line}end_zone cannot be blocked")
 
         while not all(d.curr_loc == self.end_zone for d in self.drones):
             self.turn += 1
@@ -48,21 +51,27 @@ class Simulation:
                     movements.append((d.id, d.curr_loc))
                     d.target = None
 
-            active_drones = [d for d in self.drones if d.curr_loc != self.end_zone and d.state == "waiting"]
-            active_drones.sort(key=lambda d: 1 if d.curr_loc == self.start_zone else 0)
+            active_drones = [
+                d for d in self.drones if d.curr_loc != self.end_zone and
+                d.state == "waiting"]
+            active_drones.sort(
+                key=lambda d: 1 if d.curr_loc == self.start_zone else 0)
 
             for d in active_drones:
-                next_step = self.router.find_dynamic_step(d.curr_loc, self.end_zone, self.turn)
-                
+                next_step = self.router.find_dynamic_step(
+                    d.curr_loc, self.end_zone, self.turn)
+
                 if next_step:
                     next_zone, arrival_turn = next_step
-                    
+
                     if next_zone == d.curr_loc:
-                        self.router.reserve_step(d.curr_loc, d.curr_loc, self.turn, arrival_turn)
+                        self.router.reserve_step(
+                            d.curr_loc, d.curr_loc, self.turn, arrival_turn)
                         continue
 
                     z_obj = self.zones[next_zone]
-                    self.router.reserve_step(d.curr_loc, next_zone, self.turn, arrival_turn)
+                    self.router.reserve_step(
+                        d.curr_loc, next_zone, self.turn, arrival_turn)
 
                     if z_obj.type == "restricted":
                         d.state = "moving"
@@ -76,8 +85,10 @@ class Simulation:
                 movements.sort(key=lambda x: int(x[0][1:]))
                 print_turn(movements, self.zones)
             else:
-                waiting_drones = [d for d in self.drones if d.curr_loc != self.end_zone]
-                if all(d.state == "waiting" and d.curr_loc == self.start_zone for d in waiting_drones):
-                    break 
-                
+                waiting_drones = [
+                    d for d in self.drones if d.curr_loc != self.end_zone]
+                if all(d.state == "waiting"
+                        and d.curr_loc == self.start_zone
+                        for d in waiting_drones):
+                    break
         print(f"\nTotal moves (turns): {self.turn}")

@@ -1,16 +1,25 @@
 from rich import print
 from webcolors import name_to_hex
+from webcolors import names
+from exceptions import InvalidConfErr
 
 
 def print_turn(movements, zones):
+
     if not movements:
         return
-
     output = []
 
     custom_colors = {
-        "rainbow": "#ff00ff",
-        "darkred": "#8b0000"
+        "rainbow": [
+            "#ff0000",  # Red
+            "#ff7f00",  # Orange
+            "#ffff00",  # Yellow
+            "#00ff00",  # Green
+            "#0000ff",  # Blue
+            "#4b0082",  # Indigo
+            "#8f00ff",  # Violet
+        ],
     }
 
     for drone_id, dest in movements:
@@ -18,7 +27,20 @@ def print_turn(movements, zones):
         zone = zones.get(dest_name)
 
         if zone and zone.color:
+            line = f"Line: {line_number}: " if zones.line_number else ""
+            if zone.color not in custom_colors and zone.color not in names():
+                raise InvalidConfErr(
+                    f"{line}Invalid color: {zone.color}")
             color_str = zone.color.lower()
+
+            if color_str == "rainbow":
+                colors = custom_colors["rainbow"]
+                rainbow_text = "".join(
+                    f"[{colors[i % len(colors)]}]{char}[/]"
+                    for i, char in enumerate(dest)
+                )
+                output.append(f"{drone_id}-{rainbow_text}")
+                continue
 
             try:
                 if color_str in custom_colors:

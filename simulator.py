@@ -29,7 +29,7 @@ class Simulation:
             self.link_caps[(c.zone2, c.zone1)] = c.max_link_capacity
 
     def calculate_paths(self) -> None:
-        self.router = SimulationRouter(self.zones, self.graph, self.link_caps)
+        self.router = SimulationRouter(self.zones, self.graph, self.link_caps, self.start_zone)
 
     def run(self) -> None:
         for name, zone in self.zones.items():
@@ -66,12 +66,14 @@ class Simulation:
 
                     if next_zone == d.curr_loc:
                         self.router.reserve_step(
-                            d.curr_loc, d.curr_loc, self.turn, arrival_turn)
+                            d.curr_loc, d.curr_loc, self.turn, arrival_turn, 1)
                         continue
 
                     z_obj = self.zones[next_zone]
+                    _, turns_needed = self.router.get_move_cost_and_turns(z_obj.type)
+                
                     self.router.reserve_step(
-                        d.curr_loc, next_zone, self.turn, arrival_turn)
+                        d.curr_loc, next_zone, self.turn, arrival_turn, turns_needed)
 
                     if z_obj.type == "restricted":
                         d.state = "moving"

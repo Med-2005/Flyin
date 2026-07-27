@@ -70,6 +70,7 @@ class Simulation:
             for d in active_drones:
                 next_step = self.router.find_dynamic_step(
                     d.curr_loc, self.end_zone, self.turn)
+
                 if not next_step:
                     current = self.zones[d.curr_loc]
                     raise NoPathError(

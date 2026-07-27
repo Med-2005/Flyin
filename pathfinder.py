@@ -92,9 +92,9 @@ class SimulationRouter:
                 return None
 
             if self.is_zone_available(curr_zone, curr_turn + 1):
-                heapq.heappush(pq, (
-                    curr_cost + 1.0, curr_turn + 1, curr_zone, path + [(
-                        curr_zone, curr_turn + 1)]))
+                heapq.heappush(
+                    pq, (curr_cost + 1.0, curr_turn + 1,
+                         curr_zone, path + [(curr_zone, curr_turn + 1)]))
 
             for neighbor in self.graph.get(curr_zone, []):
                 neighbor_zone = self.zones[neighbor]

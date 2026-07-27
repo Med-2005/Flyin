@@ -2,7 +2,7 @@ from typing import Dict, List, Tuple
 from models import Zone, Connection, Drone
 from pathfinder import SimulationRouter
 from display import print_turn
-from exceptions import InvalidConfErr
+from exceptions import InvalidConfErr, NoPathError
 
 
 class Simulation:
@@ -30,7 +30,8 @@ class Simulation:
 
     def calculate_paths(self) -> None:
         self.router = SimulationRouter(
-            self.zones, self.graph, self.link_caps, self.start_zone)
+            self.zones, self.graph,
+            self.link_caps, self.start_zone, self.end_zone)
 
     def run(self) -> None:
         for name, zone in self.zones.items():
@@ -47,21 +48,34 @@ class Simulation:
                 if d.curr_loc == self.end_zone:
                     continue
                 if d.state == "moving" and d.target:
+                    if (hasattr(d, "arrival_turn") and
+                       self.turn < d.arrival_turn):
+                        continue
                     d.curr_loc = d.target
                     d.state = "waiting"
+                    d.last_arrival_turn = self.turn
                     movements.append((d.id, d.curr_loc))
                     d.target = None
 
-            active_drones = [
-                d for d in self.drones if d.curr_loc != self.end_zone and
-                d.state == "waiting"]
+            active_drones = []
+
+            for d in self.drones:
+                if d.curr_loc != self.end_zone and d.state == "waiting":
+                    if getattr(d, "last_arrival_turn", -1) != self.turn:
+                        active_drones.append(d)
+
             active_drones.sort(
                 key=lambda d: 1 if d.curr_loc == self.start_zone else 0)
 
             for d in active_drones:
                 next_step = self.router.find_dynamic_step(
                     d.curr_loc, self.end_zone, self.turn)
-
+                if not next_step:
+                    current = self.zones[d.curr_loc]
+                    raise NoPathError(
+                        f"Drone is stuck at '{current.name}' "
+                        f"(defined on Line {current.line_number}). "
+                        "No valid path to the end zone.")
                 if next_step:
                     next_zone, arrival_turn = next_step
 
@@ -81,6 +95,7 @@ class Simulation:
                     if z_obj.type == "restricted":
                         d.state = "moving"
                         d.target = next_zone
+                        d.arrival_turn = self.turn + 1
                         movements.append((d.id, f"{d.curr_loc}-{next_zone}"))
                     else:
                         d.curr_loc = next_zone

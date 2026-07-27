@@ -1,7 +1,6 @@
-nb_drones: 3
-
+nb_drones: 10
 start_hub: start 0 0 []
-hub: A 1 0 []
+hub: A 1 0 [zone=restricted]
 hub: B 2 0 []
 hub: C 1 2 []
 hub: D 2 2 []
@@ -11,7 +10,6 @@ end_hub: goal 4 1 []
 connection: start-A
 connection: A-B
 connection: B-goal
-
 connection: start-C
 connection: C-D
 connection: D-E

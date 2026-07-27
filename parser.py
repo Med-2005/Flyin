@@ -1,7 +1,6 @@
 from typing import Dict, List, NoReturn, Optional, Set, Tuple
 from exceptions import InvalidConfErr
 from models import Zone, Connection
-# import sys
 
 
 RawLine = Tuple[int, str]
@@ -225,7 +224,21 @@ class MapParser:
                     stations[1] not in self.zones):
                 self.raise_line_error(
                     line_number, f"Invalid connection: {raw}")
-
+            zone_1 = stations[0].strip()
+            zone_2 = stations[1].strip()
+            if zone_1 not in self.zones or self.zones[
+                    zone_1].line_number > line_number:
+                self.raise_line_error(
+                    line_number, "Connection links is "
+                    "not previously "
+                    f"defined zone '{zone_1}'")
+            if zone_2 not in self.zones or self.zones[
+                    zone_2].line_number > line_number:
+                self.raise_line_error(
+                    line_number, "Connection links is "
+                    "not previously "
+                    f"defined zone '{zone_2}'"
+                )
             mlc = 1
             seen = set()
 

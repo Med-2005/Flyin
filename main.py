@@ -6,7 +6,7 @@ from simulator import Simulation
 def main() -> None:
     if len(sys.argv) != 2:
         print("Usage: python main.py <map_file>")
-        sys.exit(1)
+        sys.exit(0)
 
     map_file = sys.argv[1]
 
@@ -32,7 +32,7 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         print(f"Errors happens: {e}")
-        sys.exit(1)
+        sys.exit(0)
     except KeyboardInterrupt:
         print("Exit Safely")
-        sys.exit(1)
+        sys.exit(0)

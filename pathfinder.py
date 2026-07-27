@@ -8,13 +8,15 @@ class SimulationRouter:
     def __init__(
         self, zones: Dict[str, Zone],
         graph: Dict[str, List[str]],
-            link_caps: Dict[Tuple[str, str], int], start_zone: str):
+            link_caps: Dict[Tuple[str, str], int],
+            start_zone: str, end_zone: str):
         self.zones = zones
         self.graph = graph
         self.link_caps = link_caps
         self.start_zone = start_zone
         self.reservations: Dict[str, Dict[int, int]] = {z: {} for z in zones}
         self.link_reservations: Dict[Tuple[str, str], Dict[int, int]] = {}
+        self.end_zone = end_zone
 
     def get_move_cost_and_turns(self, zone_type: str) -> Tuple[float, int]:
         if zone_type == "restricted":
@@ -24,7 +26,7 @@ class SimulationRouter:
         return (1.0, 1)
 
     def is_zone_available(self, zone_name: str, target_turn: int) -> bool:
-        if zone_name == self.start_zone:
+        if zone_name == self.start_zone or zone_name == self.end_zone:
             return True
         zone = self.zones[zone_name]
         current_occupancy = self.reservations[zone_name].get(target_turn, 0)
@@ -71,8 +73,11 @@ class SimulationRouter:
         pq = [(0.0, start_turn, start, [])]
         visited: Set[Tuple[str, int]] = set()
 
+        # pq = [(0.0, 1, start, [])]
         while pq:
             curr_cost, curr_turn, curr_zone, path = heapq.heappop(pq)
+            # curr_cost = 0, curr_turn = 1, curr_zone = start
+            # path = []
 
             if curr_turn > start_turn + max_turns:
                 continue

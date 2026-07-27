@@ -1,16 +1,9 @@
-nb_drones: 10
-start_hub: start 0 0 []
-hub: A 1 0 [zone=restricted]
-hub: B 2 0 []
-hub: C 1 2 []
-hub: D 2 2 []
-hub: E 3 2 []
-end_hub: goal 4 1 []
-
+nb_drones: 2
+start_hub: start 0 0 [color=green]
+end_hub: goal 10 10 [color=yellow]
+hub: A 5 5 [zone=normal color=blue]
+hub: B 5 0 [zone=priority color=red]
 connection: start-A
-connection: A-B
+connection: start-B
+connection: A-goal
 connection: B-goal
-connection: start-C
-connection: C-D
-connection: D-E
-connection: E-goal

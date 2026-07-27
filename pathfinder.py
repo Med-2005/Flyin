@@ -125,12 +125,15 @@ class SimulationRouter:
         if link not in self.link_reservations:
             self.link_reservations[link] = {}
 
-        for t in range(start_turn, start_turn + turns_needed):
-            self.link_reservations[link][t] = self.link_reservations[link].get(
-                t, 0) + 1
+        link_reservations = self.link_reservations[link]
 
-        self.reservations[next_zone][arrival_turn] = self.reservations[
-            next_zone].get(arrival_turn, 0) + 1
+        for t in range(start_turn, start_turn + turns_needed):
+            link_reservations[t] = link_reservations.get(t, 0) + 1
+
+        zone_reservations = self.reservations[next_zone]
+        zone_reservations[arrival_turn] = (
+            zone_reservations.get(arrival_turn, 0) + 1
+        )
 
     def find_dynamic_step(
         self, start: str, end: str, start_turn: int,

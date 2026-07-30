@@ -1,6 +1,12 @@
+"""Find safe, capacity-aware routes for drones."""
+
 import heapq
 from typing import Dict, List, Optional, Tuple, Set
 from models import Zone
+
+
+PathStep = Tuple[str, int]
+QueueItem = Tuple[float, int, str, List[PathStep]]
 
 
 class SimulationRouter:
@@ -108,7 +114,7 @@ class SimulationRouter:
 
     def reserve_step(
         self, curr_zone: str, next_zone: str, start_turn: int,
-            arrival_turn: int, turns_needed: int):
+            arrival_turn: int, turns_needed: int) -> None:
         """
         Reserve capacity on a link and the destination zone for
         a drone's planned movement.
@@ -135,9 +141,9 @@ class SimulationRouter:
             zone_reservations.get(arrival_turn, 0) + 1
         )
 
-    def find_dynamic_step(
-        self, start: str, end: str, start_turn: int,
-            max_turns: int = None) -> Optional[Tuple[str, int]]:
+    def dijikstra_algo(self, start: str, end: str,
+                       start_turn: int,
+                       max_turns: Optional[int] = None) -> Optional[PathStep]:
         """
         Find the optimal next step for a drone using
         a time-aware Dijkstra's algorithm.
@@ -156,7 +162,8 @@ class SimulationRouter:
         """
         if max_turns is None:
             max_turns = len(self.zones) * 10
-        pq = [(0.0, start_turn, start, [])]
+
+        pq: List[QueueItem] = [(0.0, start_turn, start, [])]
         visited: Set[Tuple[str, int]] = set()
 
         while pq:
@@ -164,7 +171,6 @@ class SimulationRouter:
 
             if curr_turn > start_turn + max_turns:
                 continue
-
             if (curr_zone, curr_turn) in visited:
                 continue
             visited.add((curr_zone, curr_turn))

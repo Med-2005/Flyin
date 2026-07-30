@@ -65,6 +65,11 @@ make clean         # remove Python and mypy caches
 Configuration files are plain text. Empty lines and text after `#` are ignored.
 Every active line has the form `key: value`.
 
+An empty file (including one containing only comments) is rejected with a
+message showing the required `nb_drones`, hub, and `connection` entries. When
+hub metadata is invalid, the error includes this format reminder:
+`max_drones=<number> color=<value> zone=<type>`.
+
 ```text
 nb_drones: 2
 start_hub: start 0 0 [color=green]

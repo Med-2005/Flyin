@@ -1,9 +1,16 @@
+"""Run a drone simulation from a map configuration file."""
+
 import sys
 from parser import MapParser
 from simulator import Simulation
 
 
 def main() -> None:
+    """Read the map file argument, build the simulation, and run it.
+
+    Returns:
+        None.
+    """
     if len(sys.argv) != 2:
         print("Usage: python main.py <map_file>")
         sys.exit(0)
@@ -31,7 +38,7 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print(f"Errors happens: {e}")
+        print(f"Error: {e}")
         sys.exit(0)
     except KeyboardInterrupt:
         print("Exit Safely")
